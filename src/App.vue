@@ -1,8 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue'
-
-const typeColors = { 
-  normal: '#A8A77A', fire: '#EE8130', water: '#6390F0', 
+import pokemonCard from './components/pokemonCard.vue';
+import PokemonDetails from './components/PokemonDetails.vue';
+const typeColors = {
+  normal: '#A8A77A', fire: '#EE8130', water: '#6390F0',
   electric: '#F7D02C', grass: '#7AC74C', ice: '#96D9D6',
   fighting: '#C22E28', poison: '#A33EA1', ground: '#E2BF65',
   flying: '#A98FF3', psychic: '#F95587', bug: '#A6B91A',
@@ -19,7 +20,13 @@ const limit = ref(10);
 async function getPokemonDetails(id){
   try{
     const response= await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+
     const data = await response.json();
+    const pokemonSpecies = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${data.name}`);
+
+    data.species = await pokemonSpecies.json();
+
+
     return data;
   }
   catch(error){
@@ -30,7 +37,7 @@ async function getPokemonDetails(id){
 
 
 // async function renderAllPokemon(){
-  
+
 // }
 async function fetchAllPokemon(){
   const response = await fetch(`https://pokeapi.co/api/v2/pokemon/?offset=0&limit=898`);
@@ -47,16 +54,27 @@ async function renderAllPokemon(){
         id: id,
         name: pokemon.name,
         types: details?.types.map(t => t.type.name) || [],
-        image: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`
+        image: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`,
+        height: details?.height,
+        weight: details?.weight,
+        abilities: details?.abilities.map(a => a.ability.name) || [],
+        stats: details?.stats.map(s => ({ name: s.stat.name, value: s.base_stat })) || [],
+        entry: details?.species.flavor_text_entries[0].flavor_text,
+        // evolution: details?.species.evolution_chain.url
+
+
+
+
       };
     })
   );
+  console.log(newPokemon);
   pokemonListDisplay.value = newPokemon;
 }
 const pokemonToShow=ref([]);
 async function displayPokemon(){
   console.log(offset.value);
-  console.log(limit.value); 
+  console.log(limit.value);
   const pokemonRender = pokemonListDisplay.value.slice(0, offset.value + limit.value);
   offset.value += limit.value;
   pokemonToShow.value = pokemonRender;
@@ -67,7 +85,7 @@ const filteredPokemon = computed( () =>{
   if(!searchQuery.value){
     return pokemonToShow.value;
   }
-  return pokemonListDisplay.value.filter(pokemon => 
+  return pokemonListDisplay.value.filter(pokemon =>
     pokemon.name.includes(searchQuery.value.toLowerCase())
   );
 })
@@ -75,55 +93,83 @@ async function initializePokemon() {
   await renderAllPokemon();
   await displayPokemon();
 }
+console.log(pokemonListDisplay.value);
+const selectedPokemon=ref(null);
+function selectPokemon(pokemon){
+  selectedPokemon.value=pokemon;
+  console.log(selectedPokemon.value);
+}
+//add event click card to show details
+
 
 initializePokemon();
 
-// const detailsPokemonShow=ref([]);
-// function showPokemonDetails(pokemon){
-//   detailsPokemonShow.value=pokemon;
-//   const popUp = document.querySelector('.pop-up');
-//   popUp.style.display = 'block';
-//   popUp.addEventListener('click', () => {
-//     popUp.style.display = 'none';
-//   });
 
 
-import pokemonCard from './components/pokemonCard.vue';
+
+
+
 </script>
 
 <template>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
   <div id="#app">
+    <div v-if="!selectedPokemon">
     <div class="search">
       <input type="text" v-model="searchQuery" id="search-input" placeholder="Search Pokemon">
     </div>
     <div class="container-pokemon">
-      <pokemonCard 
-        v-for="pokemon in filteredPokemon" 
-        :key="pokemon.id" 
-        :pokemon="pokemon" 
+      <pokemonCard
+        v-for="pokemon in filteredPokemon"
+        :key="pokemon.id"
+        :pokemon="pokemon"
         :type-colors="typeColors"
+        @click="selectPokemon(pokemon)"
       />
+
     </div>
     <div class="load-more">
       <button v-show="!searchQuery && offset < pokemonListDisplay.length" @click="displayPokemon" id="load-more">Load more</button>
     </div>
-    <!-- <div class="pop-up" >
-      <div class="pop-up-content" >
-        <h2>{{pokemon.name}}</h2>
-        <img :src="pokemon.image" :alt="pokemon.name">
-        <p>{{pokemon.details}}</p>
-      </div>
-    </div> -->
+  </div>
+  <PokemonDetails v-else :pokemon="selectedPokemon" :type-colors="typeColors" @back="selectedPokemon=null"/>
+
+
   </div>
 </template>
 
+<script>
+//props selectedPokemon to show details
+export default {
+  components: {
+    pokemonCard,
+    PokemonDetails
+  },
+  setup(){
+    return {
+      typeColors,
+      pokemonToShow,
+      searchQuery,
+      offset,
+      limit,
+      filteredPokemon,
+      selectedPokemon,
+      displayPokemon,
+      selectPokemon
+    }
+  }
+}
 
+
+</script>
 <style scoped>
 *{
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 .container-pokemon{
     display: flex;
@@ -134,7 +180,7 @@ import pokemonCard from './components/pokemonCard.vue';
     margin: 0 auto;
     padding: 20px;
     gap:40px;
-    
+
 }
 #load-more{
     display: flex;
@@ -143,10 +189,10 @@ import pokemonCard from './components/pokemonCard.vue';
     background-color: aliceblue;
     padding: 10px;
     border-radius: 10px;
-    
+
 }
 
-    
+
 .type-container{
     display: flex;
     justify-content: center;
