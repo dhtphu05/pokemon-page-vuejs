@@ -37,51 +37,38 @@
       <div class="detail__wrap">
         <div class="tag">
           <div class="tag__label HP">HP</div>
-          <div class="tag__detail">45</div>
+          <div class="tag__detail">{{ pokemon.stats[0].value }}</div>
         </div>
         <div class="tag">
           <div class="tag__label ATK">ATK</div>
-          <div class="tag__detail">49</div>
+          <div class="tag__detail">{{ pokemon.stats[1].value }}</div>
         </div>
         <div class="tag">
           <div class="tag__label DEF">DEF</div>
-          <div class="tag__detail">49</div>
+          <div class="tag__detail">{{ pokemon.stats[2].value }}</div>
         </div>
         <div class="tag">
           <div class="tag__label SpA">SpA</div>
-          <div class="tag__detail">65</div>
+          <div class="tag__detail">{{ pokemon.stats[3].value }}</div>
         </div>
         <div class="tag">
           <div class="tag__label SpD">SpD</div>
-          <div class="tag__detail">65</div>
+          <div class="tag__detail">{{ pokemon.stats[4].value }}</div>
         </div>
         <div class="tag">
           <div class="tag__label SPD">SPD</div>
-          <div class="tag__detail">45</div>
+          <div class="tag__detail">{{ pokemon.stats[5].value }}</div>
         </div>
       </div>
     </div>
     <div class="evolution">
       <h3 class="label">Evolution</h3>
       <div class="evolution__wrap">
-        <div class="evolution">
+        
+        <div class="evolution" v-for="pokemon in evolutionListDisplay" :key="pokemon" >
           <div class="form">
-            <h4 class="name">bulbasaur</h4><img
-              src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="bulbasaur">
-          </div>
-        </div>
-        <div class="divider">&gt;</div>
-        <div class="evolution">
-          <div class="form">
-            <h4 class="name">ivysaur</h4><img
-              src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/2.png" alt="ivysaur">
-          </div>
-        </div>
-        <div class="divider">&gt;</div>
-        <div class="evolution">
-          <div class="form">
-            <h4 class="name">venusaur</h4><img
-              src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/3.png" alt="venusaur">
+            <h4 class="name">{{ pokemon.name }}</h4><img
+              :src="pokemon.image" :alt="pokemon.name">
           </div>
         </div>
       </div>
@@ -101,6 +88,10 @@ export default {
     },
     selectedPokemon: {
       type: Object,
+      required: true
+    },
+    evolutionListDisplay: {
+      type: Array,
       required: true
     }
   }

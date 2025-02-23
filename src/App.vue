@@ -16,7 +16,6 @@ const searchQuery = ref('');
 const offset = ref(0);
 const limit = ref(10);
 
-
 async function getPokemonDetails(id){
   try{
     const response= await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
@@ -25,8 +24,6 @@ async function getPokemonDetails(id){
     const pokemonSpecies = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${data.name}`);
 
     data.species = await pokemonSpecies.json();
-
-
     return data;
   }
   catch(error){
@@ -35,7 +32,12 @@ async function getPokemonDetails(id){
   }
 }
 
-
+async function getPokemonEvolution(pokemon){
+  const response= await fetch(pokemon.evolution);
+  const data = await response.json();
+  console.log(data);
+  return data;
+}
 // async function renderAllPokemon(){
 
 // }
@@ -60,7 +62,7 @@ async function renderAllPokemon(){
         abilities: details?.abilities.map(a => a.ability.name) || [],
         stats: details?.stats.map(s => ({ name: s.stat.name, value: s.base_stat })) || [],
         entry: details?.species.flavor_text_entries[0].flavor_text,
-        // evolution: details?.species.evolution_chain.url
+        evolution: details?.species.evolution_chain.url
 
 
 
@@ -93,15 +95,51 @@ async function initializePokemon() {
   await renderAllPokemon();
   await displayPokemon();
 }
+const evolutionList=ref([]);
+const evolutionListDisplay=ref([]);
+async function extractEvolution(pokemon){
+  const data = await getPokemonEvolution(pokemon);
+  // data= data.chain;
+  let dataChain=data.chain;
+  while(dataChain.evolves_to.length>0){
+    evolutionList.value.push(dataChain.species.name);
+    dataChain=dataChain.evolves_to[0];
+  }
+  evolutionList.value.push(dataChain.species.name);
+  console.log(evolutionList.value);
+  for(let pokemon of evolutionList.value){
+    evolutionListDisplay.value.push({
+      name: pokemon,
+      image: findImage(pokemon)
+    });
+  }
+  console.log(evolutionListDisplay.value);
+
+
+
+
+
+}
+function findImage(namePokemon){
+  for(let pokemon of pokemonListDisplay.value){
+    if(pokemon.name==namePokemon){
+      return pokemon.image;
+    }
+  }
+}
 console.log(pokemonListDisplay.value);
 const selectedPokemon=ref(null);
 function selectPokemon(pokemon){
   selectedPokemon.value=pokemon;
-  console.log(selectedPokemon.value);
+  extractEvolution(pokemon);
 }
 //add event click card to show details
 
-
+function handleBack(){
+  selectedPokemon.value=null;
+  evolutionList.value=[];
+  evolutionListDisplay.value=[];
+}
 initializePokemon();
 
 
@@ -112,7 +150,7 @@ initializePokemon();
 </script>
 
 <template>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
   <div id="#app">
@@ -134,7 +172,7 @@ initializePokemon();
       <button v-show="!searchQuery && offset < pokemonListDisplay.length" @click="displayPokemon" id="load-more">Load more</button>
     </div>
   </div>
-  <PokemonDetails v-else :pokemon="selectedPokemon" :type-colors="typeColors" @back="selectedPokemon=null"/>
+  <PokemonDetails v-else :pokemon="selectedPokemon" :evolution-list-display="evolutionListDisplay" :type-colors="typeColors" @back="handleBack"/>
 
 
   </div>
@@ -157,7 +195,9 @@ export default {
       filteredPokemon,
       selectedPokemon,
       displayPokemon,
-      selectPokemon
+      selectPokemon,
+      evolutionListDisplay,
+
     }
   }
 }

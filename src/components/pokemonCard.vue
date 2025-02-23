@@ -23,7 +23,7 @@ export default {
         typeColors: {
             type: Object,
             required: true
-        } 
+        }
     }
 };
 </script>
@@ -42,6 +42,14 @@ export default {
     width: 200px;
     height: 300px;
 
+}
+.type-container {
+    display: flex;
+    gap: 10px;
+    span{
+        padding: 5px;
+        border-radius: 5px;
+    }
 }
 
 .card img {
