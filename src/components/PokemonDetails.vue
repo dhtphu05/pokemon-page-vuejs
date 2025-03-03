@@ -1,38 +1,160 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+
+const defaultTypeColors = {
+  normal: '#A8A77A', fire: '#EE8130', water: '#6390F0',
+  electric: '#F7D02C', grass: '#7AC74C', ice: '#96D9D6',
+  fighting: '#C22E28', poison: '#A33EA1', ground: '#E2BF65',
+  flying: '#A98FF3', psychic: '#F95587', bug: '#A6B91A',
+  rock: '#B6A136', ghost: '#735797', dragon: '#6F35FC',
+  dark: '#705746', steel: '#B7B7CE', fairy: '#D685AD'
+};
+
+defineProps({
+  pokemonName: String
+});
+
+const pokemon = ref(null);
+const typeColors = ref(defaultTypeColors);
+const evolutionListDisplay = ref([]);
+const isLoading = ref(true);
+
+function goBack() {
+  //i ưant to go back to the previous page, but it still in previuos page and not go back to the home page
+  router.back();
+}
+
+onMounted(async () => {
+  try {
+    if (route.params.pokemonName) {
+      await fetchPokemonData(route.params.pokemonName);
+    }
+  } catch (error) {
+    console.error("Error initializing pokemon data:", error);
+    isLoading.value = false;
+  }
+});
+
+async function fetchPokemonData(name) {
+  try {
+    isLoading.value = true;
+
+    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`);
+    const data = await response.json();
+
+    const speciesResponse = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${data.id}`);
+    const speciesData = await speciesResponse.json();
+
+    pokemon.value = {
+      id: data.id,
+      name: data.name,
+      image:`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.id}.png`,
+      types: data.types.map(t => t.type.name),
+      height: data.height ,
+      weight: data.weight ,
+      abilities: data.abilities.map(a => a.ability.name),
+      stats: data.stats.map(s => ({ name: s.stat.name, value: s.base_stat })) || [],
+      entry: speciesData.flavor_text_entries.find(entry => entry.language.name === 'en')?.flavor_text || '',
+      evolution: speciesData.evolution_chain.url
+    };
+
+    // Fetch evolution chain data
+    await fetchEvolutionChain(pokemon.value.evolution);
+
+    isLoading.value = false;
+  } catch (error) {
+    console.error("Error fetching pokemon data:", error);
+    isLoading.value = false;
+  }
+}
+
+async function fetchEvolutionChain(url) {
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const evoChain = [];
+    let evoData = data.chain;
+
+    evoChain.push({
+      name: evoData.species.name
+    });
+
+    while (evoData.evolves_to && evoData.evolves_to.length > 0) {
+      evoData = evoData.evolves_to[0];
+      evoChain.push({
+        name: evoData.species.name
+      });
+    }
+
+    evolutionListDisplay.value = await Promise.all(
+      evoChain.map(async (evo) => {
+
+          const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${evo.name}`);
+          const data = await response.json();
+          return {
+            name: evo.name,
+            image:`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.id}.png`
+          };
+
+
+      })
+    );
+  } catch (error) {
+    console.error("Error fetching evolution chain:", error);
+  }
+}
+</script>
+
 <template>
   <div class="back-button">
-    <button @click="$emit('back')" > > Back </button>
+    <button @click="goBack"> &lt; Back </button>
   </div>
-  <div class="container" v-if="pokemon">
-    <div class="pokemon__image">
-      <img :src="pokemon?.image" :alt="pokemon?.name">
-    </div>
-    <div class="labels" >
 
-      <div v-for="type in pokemon.types" :key="type" class="label" :style="{backgroundColor: typeColors[type]}">{{ type }}</div>
+  <div v-if="isLoading" class="loading">
+    <p>Getting data from PokeDex...</p>
+  </div>
+
+  <div v-else-if="pokemon" class="container">
+    <div class="pokemon__image">
+      <img :src="pokemon.image" :alt="pokemon.name">
     </div>
+
+    <div class="labels">
+      <div v-for="type in pokemon.types" :key="type" class="label"
+           :style="{backgroundColor: typeColors[type]}">
+        {{ type }}
+      </div>
+    </div>
+
     <div class="pokemon__name">{{ pokemon.name }}</div>
     <div class="pokemon__entry">{{ pokemon.entry }}</div>
-    <div class="pokemon__details-wrap" v-if="pokemon">
+
+    <div class="pokemon__details-wrap">
       <div class="container-details">
-      <div class="label">Height</div>
-      <div class="detail-tag">{{ pokemon.height }}</div>
+        <div class="label">Height</div>
+        <div class="detail-tag">{{ pokemon.height }}</div>
       </div>
       <div class="container-details">
-      <div class="label">Weight</div>
-      <div class="detail-tag">{{ pokemon.weight }}</div>
+        <div class="label">Weight</div>
+        <div class="detail-tag">{{ pokemon.weight }}</div>
       </div>
     </div>
+
     <div class="ability">
       <h3 class="label">Abilities</h3>
       <div class="detail__wrap">
-
-        <div class="detail-tag" v-for="ability in pokemon.abilities" :key="ability" >
+        <div class="detail-tag" v-for="ability in pokemon.abilities" :key="ability">
           {{ ability }}
         </div>
-
       </div>
     </div>
-    <div class="stats">
+
+    <div class="stats" v-if="pokemon.stats && pokemon.stats.length >= 6">
       <h3 class="label">Stats</h3>
       <div class="detail__wrap">
         <div class="tag">
@@ -61,45 +183,24 @@
         </div>
       </div>
     </div>
-    <div class="evolution">
+
+    <div class="evolution" v-if="evolutionListDisplay.length > 0">
       <h3 class="label">Evolution</h3>
       <div class="evolution__wrap">
-        
-        <div class="evolution" v-for="pokemon in evolutionListDisplay" :key="pokemon" >
-          <div class="form">
-            <h4 class="name">{{ pokemon.name }}</h4><img
-              :src="pokemon.image" :alt="pokemon.name">
+        <template v-for="(evo, index) in evolutionListDisplay" :key="evo.name">
+          <div class="evolution">
+            <div class="form">
+              <h4 class="name">{{ evo.name }}</h4>
+              <img :src="evo.image" :alt="evo.name">
+            </div>
           </div>
-        </div>
+          <div v-if="index < evolutionListDisplay.length - 1" class="divider">→</div>
+        </template>
       </div>
     </div>
   </div>
+
 </template>
-<script>
-export default {
-  props: {
-    pokemon: {
-      type: Object,
-      required: true
-    },
-    typeColors: {
-      type: Object,
-      required: true
-    },
-    selectedPokemon: {
-      type: Object,
-      required: true
-    },
-    evolutionListDisplay: {
-      type: Array,
-      required: true
-    }
-  }
-};
-
-
-
-</script>
 
 
 <style scoped>
@@ -107,6 +208,8 @@ export default {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+
 }
 .back-button {
   display: flex;
@@ -179,6 +282,13 @@ export default {
   color: #2c3e50;
 
 
+}
+.loading{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 50px;
+  color:gray;
 }
 .container .pokemon__details-wrap {
   display: flex;

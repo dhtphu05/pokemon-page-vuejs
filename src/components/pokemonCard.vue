@@ -1,6 +1,13 @@
 <!-- components/PokemonCard.vue -->
 <template>
-    <div class="card">
+    <RouterLink :to="{
+      name: 'pokemon-details',
+      params: { pokemonName: pokemon.name },
+      state: {
+        pokemon: pokemonn,
+        typeColors: typeColors
+      }
+    }" class="card">
         <div class="id">{{ '#' + pokemon.id }}</div>
         <img :src="pokemon.image" :alt="pokemon.name">
         <h3>{{ pokemon.name }}</h3>
@@ -10,25 +17,29 @@
                 {{ type }}
             </span>
         </div>
-    </div>
+      </RouterLink>
 </template>
 
-<script>
-export default {
-    props: {
-        pokemon: {
-            type: Object,
-            required: true
-        },
-        typeColors: {
-            type: Object,
-            required: true
-        }
+<script setup>
+import { RouterLink } from 'vue-router'
+
+defineProps({
+    pokemon: {
+        type: Object,
+        required: true
+    },
+    typeColors: {
+        type: Object,
+        required: true
     }
-};
+})
 </script>
 
 <style scoped>
+a{
+    text-decoration: none;
+    color: black;
+}
 .card {
     display: flex;
     flex-direction: column;
